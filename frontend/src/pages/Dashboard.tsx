@@ -16,10 +16,7 @@ import CreateGroupModal from "../components/CreateGroupModal";
 function Dashboard() {
   const navigate = useNavigate();
 
-  // =========================================================
   // STATE
-  // =========================================================
-
   const [user, setUser] = useState<User | null>(null);
 
   const [groups, setGroups] = useState<Group[]>([]);
@@ -40,9 +37,7 @@ function Dashboard() {
 
   const [apiError, setApiError] = useState("");
 
-  // =========================================================
   // LOGOUT
-  // =========================================================
 
   const logout = useCallback(() => {
     console.log("========== LOGOUT ==========");
@@ -72,9 +67,7 @@ function Dashboard() {
     });
   }, [navigate]);
 
-  // =========================================================
   // CHECK PRIVATE CHAT PERMISSION
-  // =========================================================
 
   const isPrivateChatAllowed = useCallback(
     (
@@ -153,17 +146,12 @@ function Dashboard() {
     [user, groups],
   );
 
-  // =========================================================
   // LOAD DASHBOARD
-  // =========================================================
 
   const loadDashboard = useCallback(async () => {
     try {
       setApiError("");
-
-      // ===================================================
       // GET CURRENT USER FROM STORAGE
-      // ===================================================
 
       const savedUser = localStorage.getItem("user");
 
@@ -182,10 +170,7 @@ function Dashboard() {
         logout();
         return;
       }
-
-      // ===================================================
       // LOAD GROUPS
-      // ===================================================
 
       let groupsArray: Group[] = [];
 
@@ -337,9 +322,7 @@ function Dashboard() {
     }
   }, [logout]);
 
-  // =========================================================
   // INITIALIZE DASHBOARD
-  // =========================================================
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -383,20 +366,16 @@ function Dashboard() {
     }
   }, [navigate, loadDashboard, logout]);
 
-  // =========================================================
-  // REFRESH
-  // =========================================================
-
+   // REFRESH
+ 
   const refreshDashboard = async () => {
     setRefreshing(true);
 
     await loadDashboard();
   };
 
-  // =========================================================
-  // GROUP SELECT
-  // =========================================================
-
+   // GROUP SELECT
+  
   const selectGroup = (group: Group) => {
     console.log("GROUP SELECTED:", group);
 
@@ -406,10 +385,8 @@ function Dashboard() {
     setSelectedPrivateUser(null);
   };
 
-  // =========================================================
   // PRIVATE USER SELECT
-  // =========================================================
-
+ 
   const selectPrivateUser = (person: User) => {
     console.log("PRIVATE USER SELECTED:", person);
 
@@ -427,10 +404,8 @@ function Dashboard() {
     setSelectedGroup(null);
   };
 
-  // =========================================================
-  // CHAT FROM GROUP ROSTER
-  // =========================================================
-
+ // CHAT FROM GROUP ROSTER
+ 
   const handlePrivateSelect = (person: User) => {
     console.log("CHAT BUTTON CLICKED:", person);
 
@@ -448,10 +423,8 @@ function Dashboard() {
     setSelectedGroup(null);
   };
 
-  // =========================================================
   // LOADING SCREEN
-  // =========================================================
-
+ 
   if (loading) {
     return (
       <div
@@ -495,10 +468,8 @@ function Dashboard() {
     );
   }
 
-  // =========================================================
-  // USER NOT FOUND
-  // =========================================================
-
+ // USER NOT FOUND
+ 
   if (!user) {
     return (
       <div
@@ -538,9 +509,8 @@ function Dashboard() {
     );
   }
 
-  // =========================================================
   // MAIN DASHBOARD
-  // =========================================================
+
 
   return (
     <div
@@ -550,8 +520,7 @@ function Dashboard() {
       }}
     >
       {/* =====================================================
-          SIDEBAR
-      ===================================================== */}
+          SIDEBAR ================================= */}
 
       <Sidebar
         user={user}
@@ -814,9 +783,7 @@ function Dashboard() {
   );
 }
 
-// =============================================================
 // FEATURE CARD
-// =============================================================
 
 function FeatureCard({
   icon,
