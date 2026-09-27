@@ -1,124 +1,556 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Mentor–Mentee Chat Portal – Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend API for the **Mentor–Mentee Chat Portal**, developed using **NestJS, TypeScript, MongoDB, Mongoose, JWT, and Socket.IO**.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+The backend provides authentication, role-based access, group management, private and group messaging, file uploads, reports, doubts, announcements, and real-time communication.
 
-## Description
+---
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 1. Technologies Used
 
-## Project setup
+* NestJS
+* TypeScript
+* Node.js
+* MongoDB
+* Mongoose
+* JWT
+* Socket.IO
+* Multer
+* REST API
 
-```bash
-$ npm install
+---
+
+## 2. Main Features
+
+### Authentication
+
+* User Signup
+* User Login
+* JWT authentication
+* Password validation
+* Role-based access control
+
+### User Roles
+
+The backend supports three roles:
+
+* **Admin**
+* **Mentor**
+* **Mentee**
+
+### User Management
+
+* Get users
+* Get users by role
+* Role-based user access
+* User information management
+
+### Group Management
+
+* Create groups
+* Get available groups
+* Get group details
+* Add members to groups
+* View group members
+
+### Group Chat
+
+* Send group messages
+* Get group messages
+* Reply to messages
+* Delete messages
+* Pin messages
+* Mark messages as doubt
+* Create announcements
+* Report messages
+
+### Private Chat
+
+* Send private messages
+* Get private chat messages
+* Real-time private communication
+* Delete messages
+* Report messages
+
+### File Upload
+
+The backend supports file uploads for chat messages.
+
+Supported file types include:
+
+* JPG
+* PNG
+* WEBP
+* PDF
+
+Maximum file size:
+
+**5 MB**
+
+### Reports
+
+Users can report inappropriate messages.
+
+Admin can view and manage reported messages.
+
+### Real-Time Communication
+
+Socket.IO is used for:
+
+* Real-time messaging
+* Group rooms
+* Private messaging
+* Typing events
+* Socket connections
+
+---
+
+## 3. Project Structure
+
+```text
+src/
+│
+├── auth/
+│   ├── auth.controller.ts
+│   ├── auth.service.ts
+│   └── auth.module.ts
+│
+├── users/
+│   ├── users.controller.ts
+│   ├── users.service.ts
+│   ├── user.schema.ts
+│   └── users.module.ts
+│
+├── groups/
+│   ├── groups.controller.ts
+│   ├── groups.service.ts
+│   ├── group.schema.ts
+│   └── groups.module.ts
+│
+├── messages/
+│   ├── messages.controller.ts
+│   ├── messages.service.ts
+│   ├── message.schema.ts
+│   └── messages.module.ts
+│
+├── reports/
+│   ├── reports.controller.ts
+│   ├── reports.service.ts
+│   └── reports.module.ts
+│
+├── uploads/
+│
+├── app.module.ts
+├── main.ts
+└── ...
 ```
 
-## Compile and run the project
+> Folder names may differ slightly depending on the final backend implementation.
+
+---
+
+## 4. Installation
+
+Clone the repository:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+git clone <your-github-repository-url>
 ```
 
-## Run tests
+Go to the backend folder:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+cd backend
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Install dependencies:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm install
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+---
 
-## Observability
+## 5. Environment Variables
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+Create a `.env` file in the backend folder.
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
+Example:
 
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
+```env
+PORT=5000
 
-To add it to this project:
+MONGODB_URI=mongodb://localhost:27017/mentor_mentee_chat
+
+JWT_SECRET=your_jwt_secret
+JWT_EXPIRES_IN=7d
+```
+
+Use your actual MongoDB connection string and JWT secret.
+
+Do not upload the `.env` file to GitHub.
+
+---
+
+## 6. Run the Backend
+
+Start the development server:
 
 ```bash
-$ npm install @nestjs/observe
+npm run start:dev
 ```
 
-Then follow the [setup guide](https://docs.nestjs.com/observability/overview) - it takes a single import and an app key.
+The backend will normally run on:
 
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
+```text
+http://localhost:5000
+```
 
-## Resources
+---
 
-Check out a few resources that may come in handy when working with NestJS:
+## 7. Production
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+Build the backend:
 
-## Support
+```bash
+npm run build
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Start the production server:
 
-## Stay in touch
+```bash
+npm run start:prod
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+---
 
-## License
+## 8. Database
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+The project uses **MongoDB** with **Mongoose**.
+
+Database flow:
+
+```text
+Frontend
+   ↓
+NestJS REST API
+   ↓
+Mongoose
+   ↓
+MongoDB
+```
+
+MongoDB stores:
+
+* Users
+* Groups
+* Messages
+* Reports
+* Group members
+* Message information
+
+---
+
+## 9. Authentication Flow
+
+The authentication flow uses JWT.
+
+```text
+User
+ ↓
+Login / Signup
+ ↓
+NestJS Authentication
+ ↓
+JWT Token
+ ↓
+Frontend
+ ↓
+Authenticated API Requests
+```
+
+The JWT token is used to access protected backend APIs.
+
+---
+
+## 10. API Modules
+
+The backend contains APIs for:
+
+```text
+Authentication
+Users
+Groups
+Messages
+Private Messages
+Reports
+File Uploads
+```
+
+Examples of operations:
+
+```text
+POST   /auth/signup
+POST   /auth/login
+
+GET    /users
+GET    /users?role=MENTOR
+GET    /users?role=MENTEE
+
+GET    /groups
+POST   /groups
+GET    /groups/:id
+
+GET    /messages/group/:id
+POST   /messages
+
+GET    /messages/private/:userId
+DELETE /messages/:id
+
+POST   /messages/:id/report
+```
+
+> Exact API routes may vary according to the final controller implementation.
+
+---
+
+## 11. Socket.IO
+
+Socket.IO provides real-time communication between users.
+
+The backend creates socket connections and handles events such as:
+
+```text
+connection
+disconnect
+join_group
+leave_group
+send_message
+message:new
+typing
+```
+
+Example communication:
+
+```text
+User A
+   │
+   │ Socket.IO
+   ↓
+NestJS Socket Server
+   │
+   ↓
+User B
+```
+
+This allows messages to appear without refreshing the page.
+
+---
+
+## 12. Group Communication
+
+When a user opens a group chat:
+
+```text
+User Login
+    ↓
+Dashboard
+    ↓
+Select Group
+    ↓
+Join Group Socket Room
+    ↓
+Send / Receive Messages
+```
+
+Each group can have multiple members.
+
+---
+
+## 13. Private Communication
+
+Private messages are sent between individual users.
+
+Example:
+
+```text
+Mentor
+   ↕
+Mentee
+```
+
+The backend verifies the users and stores private messages in MongoDB.
+
+---
+
+## 14. Role-Based Access
+
+Different users have different permissions.
+
+### Admin
+
+* Manage groups
+* Add members
+* View reports
+* Manage communication features
+
+### Mentor
+
+* Access assigned groups
+* Communicate with mentees
+* Handle doubts
+* Create announcements
+
+### Mentee
+
+* Access assigned groups
+* Communicate with mentors
+* Ask doubts
+* Participate in discussions
+
+---
+
+## 15. File Upload
+
+Files can be uploaded through the backend.
+
+Supported formats:
+
+```text
+.jpg
+.jpeg
+.png
+.webp
+.pdf
+```
+
+Maximum size:
+
+```text
+5 MB
+```
+
+Uploaded files are handled by the backend and can be shared through chat messages.
+
+---
+
+## 16. Error Handling
+
+The backend handles common errors such as:
+
+* Invalid credentials
+* Unauthorized requests
+* Invalid JWT token
+* User not found
+* Group not found
+* Message not found
+* Invalid file type
+* File size exceeded
+* Invalid request data
+
+---
+
+## 17. CORS
+
+The backend allows the frontend application to communicate with the API and Socket.IO server.
+
+Example development setup:
+
+```text
+Frontend
+http://localhost:5173
+
+Backend
+http://localhost:5000
+```
+
+---
+
+## 18. Development Flow
+
+Start MongoDB:
+
+```text
+MongoDB
+   ↓
+NestJS Backend
+   ↓
+React Frontend
+```
+
+Run backend:
+
+```bash
+npm run start:dev
+```
+
+Run frontend:
+
+```bash
+npm run dev
+```
+
+Then open:
+
+```text
+http://localhost:5173
+```
+
+---
+
+## 19. Important Notes
+
+* Make sure MongoDB is running.
+* Make sure the backend is running before starting the frontend.
+* Configure `.env` correctly.
+* Keep the JWT secret private.
+* Do not commit `.env` to GitHub.
+* Make sure the frontend API URL matches the backend port.
+* Socket.IO client and server should use compatible versions.
+
+---
+
+## 20. Project Goal
+
+The main goal of this backend is to provide a secure and real-time communication system for mentors and mentees.
+
+It manages:
+
+* Authentication
+* Users
+* Groups
+* Messages
+* Private chats
+* File sharing
+* Reports
+* Doubts
+* Announcements
+* Real-time communication
+
+---
+
+## 21. Backend Summary
+
+```text
+NestJS
+   +
+TypeScript
+   +
+MongoDB
+   +
+Mongoose
+   +
+JWT
+   +
+Socket.IO
+   +
+REST API
+```
+
+The backend provides the complete API and real-time communication layer for the Mentor–Mentee Chat Portal.
+
+
+## Why I Chose MongoDB?
+
+I chose MongoDB instead of PostgreSQL because this project is a real-time chat application. MongoDB has a flexible document structure, which makes it easier to store messages, files, doubts, and announcements. It also integrates easily with NestJS using Mongoose.
+It is simple to develop and easy to scale as the number of users and messages grows.
