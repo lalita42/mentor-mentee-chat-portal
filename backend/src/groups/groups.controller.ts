@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -12,7 +13,7 @@ import {
 import { GroupsService } from './groups.services.js';
 import { CreateGroupDto } from './dto/create-group.dto.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
-
+import { UpdateGroupDto } from './dto/update-grouo.dto.js';
 @Controller('groups')
 @UseGuards(JwtAuthGuard)
 export class GroupsController {
@@ -53,7 +54,18 @@ export class GroupsController {
       req.user.role,
     );
   }
-
+  @Patch(':id')
+updateGroup(
+  @Param('id') groupId: string,
+  @Body() body: UpdateGroupDto,
+  @Req() req: any,
+) {
+  return this.groupsService.updateGroup(
+    groupId,
+    body,
+    req.user.role,
+  );
+}
   @Delete(':id/members/:userId')
   removeMember(
     @Param('id') groupId: string,

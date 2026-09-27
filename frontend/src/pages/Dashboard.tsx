@@ -30,7 +30,7 @@ function Dashboard() {
   );
 
   const [showCreateGroup, setShowCreateGroup] = useState(false);
-
+  const [showEditGroup, setShowEditGroup] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [refreshing, setRefreshing] = useState(false);
@@ -366,16 +366,16 @@ function Dashboard() {
     }
   }, [navigate, loadDashboard, logout]);
 
-   // REFRESH
- 
+  // REFRESH
+
   const refreshDashboard = async () => {
     setRefreshing(true);
 
     await loadDashboard();
   };
 
-   // GROUP SELECT
-  
+  // GROUP SELECT
+
   const selectGroup = (group: Group) => {
     console.log("GROUP SELECTED:", group);
 
@@ -386,7 +386,7 @@ function Dashboard() {
   };
 
   // PRIVATE USER SELECT
- 
+
   const selectPrivateUser = (person: User) => {
     console.log("PRIVATE USER SELECTED:", person);
 
@@ -404,8 +404,8 @@ function Dashboard() {
     setSelectedGroup(null);
   };
 
- // CHAT FROM GROUP ROSTER
- 
+  // CHAT FROM GROUP ROSTER
+
   const handlePrivateSelect = (person: User) => {
     console.log("CHAT BUTTON CLICKED:", person);
 
@@ -424,7 +424,7 @@ function Dashboard() {
   };
 
   // LOADING SCREEN
- 
+
   if (loading) {
     return (
       <div
@@ -468,8 +468,8 @@ function Dashboard() {
     );
   }
 
- // USER NOT FOUND
- 
+  // USER NOT FOUND
+
   if (!user) {
     return (
       <div
@@ -535,9 +535,13 @@ function Dashboard() {
         onGroupSelect={selectGroup}
         onPrivateSelect={selectPrivateUser}
         onCreateGroup={() => setShowCreateGroup(true)}
-        onReports={() => {
-          console.log("Reports clicked");
+        onEditGroup={(group) => {
+          setSelectedGroup(group);
+          setShowEditGroup(true);
         }}
+        onReports={() => {
+  navigate("/reports");
+}}
         onLogout={logout}
       />
 
@@ -779,6 +783,17 @@ function Dashboard() {
           }}
         />
       )}
+      {showEditGroup && selectedGroup && (
+  <CreateGroupModal
+    group={selectedGroup}
+    onClose={() => setShowEditGroup(false)}
+    onCreated={async () => {
+      setShowEditGroup(false);
+      setSelectedGroup(null);
+      await loadDashboard();
+    }}
+  />
+)}
     </div>
   );
 }

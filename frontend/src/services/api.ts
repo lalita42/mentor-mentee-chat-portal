@@ -85,6 +85,17 @@ export async function createGroup(name: string, memberIds: string[]) {
 
   return response.data;
 }
+export async function updateGroup(
+  groupId: string,
+  data: {
+    name: string;
+    memberIds: string[];
+  },
+) {
+  const response = await api.patch(`/groups/${groupId}`, data);
+
+  return response.data;
+}
 
 export async function addMember(groupId: string, userId: string) {
   const response = await api.post(`/groups/${groupId}/members`, { userId });

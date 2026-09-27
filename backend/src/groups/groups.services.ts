@@ -10,6 +10,7 @@ import { Model, Types } from 'mongoose';
 import { Group, GroupDocument } from './schemas/group.schema.js';
 import { User, UserDocument } from '../auth/schemas/user.schema.js';
 import { CreateGroupDto } from './dto/create-group.dto.js';
+import { UpdateGroupDto } from './dto/update-grouo.dto.js';
 import { Role } from '../common/enums.js';
 
 @Injectable()
@@ -230,6 +231,47 @@ export class GroupsService {
     return this.populateGroup(group._id);
   }
 
+  // UPDATE MEMBERS 
+  async updateGroup(
+  groupId: string,
+  dto: UpdateGroupDto,
+  actorRole: Role,
+) {
+  if (actorRole !== Role.ADMIN) {
+    throw new ForbiddenException('Only admin can edit groups');
+  }
+
+  if (!Types.ObjectId.isValid(groupId)) {
+    throw new BadRequestException('Invalid group ID');
+  }
+
+  const group = await this.groupModel.findById(groupId);
+
+  if (!group) {
+    throw new NotFoundException('Group not found');
+  }
+
+  if (dto.name !== undefined) {
+    group.name = dto.name.trim();
+  }
+
+  if (dto.memberIds !== undefined) {
+    const validMemberIds = dto.memberIds.filter((id) =>
+      Types.ObjectId.isValid(id),
+    );
+
+    const validUsers = await this.userModel.find({
+      _id: { $in: validMemberIds },
+      isActive: true,
+    });
+
+    group.members = validUsers.map((user) => user._id);
+  }
+
+  await group.save();
+
+  return this.populateGroup(group._id);
+}
   // =========================
   // POPULATE GROUP
   // =========================

@@ -1,25 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
 
-import type { User } from "../types";
+import type { Group, User } from "../types";
 
-import { createGroup, getUsers } from "../services/api";
+import { createGroup, getUsers, updateGroup } from "../services/api";
 
 interface Props {
   onClose: () => void;
   onCreated: () => void;
+  group?: Group | null;
 }
 
-function CreateGroupModal({ onClose, onCreated }: Props) {
-  const [groupName, setGroupName] = useState("");
+function CreateGroupModal({ onClose, onCreated, group = null }: Props) {
+  const [groupName, setGroupName] = useState(group?.name || "");
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
   const [search, setSearch] = useState("");
 
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const isEditMode = Boolean(group);
 
-  const [creating, setCreating] = useState(false);
-
+  const [saving, setSaving] = useState(false);
+  
   const [error, setError] = useState("");
 
   // ============================================
@@ -29,25 +31,32 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
     loadAllUsers();
   }, []);
 
+  // Select existing group members when editing a group.
+  useEffect(() => {
+    if (!group?.members) {
+      setSelectedUsers([]);
+      return;
+    }
+
+    const memberIds = group.members
+      .map((member: any) => {
+        if (typeof member === "string") {
+          return member;
+        }
+
+        return member?._id || member?.id || "";
+      })
+      .filter(Boolean);
+
+    setSelectedUsers(memberIds);
+  }, [group]);
+
   async function loadAllUsers() {
     try {
       setLoadingUsers(true);
       setError("");
 
-      console.log("========== CREATE GROUP ==========");
-
-      console.log("Loading ALL users...");
-
-      // IMPORTANT:
-      // Do NOT pass role here.
-      // This gets all registered users.
       const response = await getUsers();
-
-      console.log("ALL USERS API RESPONSE:", response);
-
-      // ==========================================
-      // Handle all possible response formats
-      // ==========================================
 
       let allUsers: User[] = [];
 
@@ -59,20 +68,9 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
         allUsers = response.data;
       }
 
-      console.log("ALL USERS FROM API:", allUsers);
-
-      // ==========================================
-      // ONLY MENTOR + MENTEE
-      // ADMIN SHOULD NOT BE GROUP MEMBER
-      // ==========================================
-
       const mentorMenteeUsers = allUsers.filter(
         (user) => user.role === "MENTOR" || user.role === "MENTEE",
       );
-
-      // ==========================================
-      // REMOVE DUPLICATES
-      // ==========================================
 
       const uniqueUsers = Array.from(
         new Map(
@@ -86,21 +84,13 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
         ).values(),
       );
 
-      console.log("MENTOR + MENTEE USERS:", uniqueUsers);
-
-      console.log("TOTAL USERS:", uniqueUsers.length);
-
       setUsers(uniqueUsers);
 
       if (uniqueUsers.length === 0) {
         setError("No Mentor or Mentee users found.");
       }
     } catch (err: any) {
-      console.error("LOAD ALL USERS ERROR:", err);
-
-      console.error("STATUS:", err?.response?.status);
-
-      console.error("SERVER RESPONSE:", err?.response?.data);
+      console.error("LOAD USERS ERROR:", err);
 
       setUsers([]);
 
@@ -118,17 +108,9 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
     }
   }
 
-  // ============================================
-  // GET USER ID
-  // ============================================
-
   function getUserId(user: User): string {
     return user._id || user.id || "";
   }
-
-  // ============================================
-  // SELECT USER
-  // ============================================
 
   function toggleUser(userId: string) {
     if (!userId) {
@@ -144,10 +126,6 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
     });
   }
 
-  // ============================================
-  // SEARCH
-  // ============================================
-
   const filteredUsers = useMemo(() => {
     const searchValue = search.trim().toLowerCase();
 
@@ -159,7 +137,7 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
       const name = user.name?.toLowerCase() || "";
 
       const email = user.email?.toLowerCase() || "";
-
+      
       const role = user.role?.toLowerCase() || "";
 
       return (
@@ -170,10 +148,6 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
     });
   }, [users, search]);
 
-  // ============================================
-  // SELECT ALL
-  // ============================================
-
   function selectAll() {
     const ids = filteredUsers.map(getUserId).filter(Boolean);
 
@@ -182,19 +156,11 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
     });
   }
 
-  // ============================================
-  // CLEAR ALL
-  // ============================================
-
   function clearSelection() {
     setSelectedUsers([]);
   }
 
-  // ============================================
-  // CREATE GROUP
-  // ============================================
-
-  async function handleCreateGroup() {
+  async function handleSaveGroup() {
     const name = groupName.trim();
 
     if (!name) {
@@ -208,41 +174,53 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
     }
 
     try {
-      setCreating(true);
+      setSaving(true);
       setError("");
 
-      console.log("========== CREATE GROUP ==========");
+      if (isEditMode && group) {
+        const groupId = group._id;
 
-      console.log("GROUP NAME:", name);
+        if (!groupId) {
+          alert("Invalid group ID.");
+          return;
+        }
 
-      console.log("SELECTED MEMBERS:", selectedUsers);
+        await updateGroup(groupId, {
+          name,
+          memberIds: selectedUsers,
+        });
 
-      await createGroup(name, selectedUsers);
+        alert("Group updated successfully!");
+      } else {
+        await createGroup(name, selectedUsers);
 
-      alert("Group created successfully!");
+        alert("Group created successfully!");
+      }
 
       onCreated();
       onClose();
     } catch (err: any) {
-      console.error("CREATE GROUP ERROR:", err);
-
-      console.error("SERVER RESPONSE:", err?.response?.data);
+      console.error(
+        isEditMode ? "UPDATE GROUP ERROR:" : "CREATE GROUP ERROR:",
+        err,
+      );
 
       const message = err?.response?.data?.message;
 
       if (Array.isArray(message)) {
         alert(message.join(", "));
       } else {
-        alert(message || "Could not create group.");
+        alert(
+          message ||
+            (isEditMode
+              ? "Could not update group."
+              : "Could not create group."),
+        );
       }
     } finally {
-      setCreating(false);
+      setSaving(false);
     }
   }
-
-  // ============================================
-  // UI
-  // ============================================
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -250,7 +228,7 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
         {/* HEADER */}
         <div className="modal-header">
           <div>
-            <h2>Create New Group</h2>
+            <h2>{isEditMode ? "Edit Group" : "Create New Group"}</h2>
 
             <p
               style={{
@@ -259,11 +237,13 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
                 fontSize: "13px",
               }}
             >
-              Select mentors and mentees
+              {isEditMode
+                ? "Update group name and members"
+                : "Select mentors and mentees"}
             </p>
           </div>
 
-          <button type="button" onClick={onClose} disabled={creating}>
+          <button type="button" onClick={onClose} disabled={saving}>
             ✕
           </button>
         </div>
@@ -277,7 +257,7 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
           value={groupName}
           onChange={(event) => setGroupName(event.target.value)}
           placeholder="e.g. MERN Batch 2026"
-          disabled={creating}
+          disabled={saving}
         />
 
         {/* SEARCH */}
@@ -296,7 +276,7 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search name, email or role..."
-          disabled={loadingUsers || creating}
+          disabled={loadingUsers || saving}
         />
 
         {/* USER HEADER */}
@@ -310,7 +290,7 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
             marginBottom: "8px",
           }}
         >
-          <strong>All Mentors & Mentees</strong>
+          <strong>Mentors & Mentees</strong>
 
           <span
             style={{
@@ -332,14 +312,14 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
               marginBottom: "10px",
             }}
           >
-            <button type="button" onClick={selectAll} disabled={creating}>
+            <button type="button" onClick={selectAll} disabled={saving}>
               Select All
             </button>
 
             <button
               type="button"
               onClick={clearSelection}
-              disabled={creating || selectedUsers.length === 0}
+              disabled={saving || selectedUsers.length === 0}
             >
               Clear
             </button>
@@ -369,9 +349,7 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
           {/* LOADING */}
 
           {loadingUsers && (
-            <div className="empty-small">
-              Loading all mentors and mentees...
-            </div>
+            <div className="empty-small">Loading mentors and mentees...</div>
           )}
 
           {/* ERROR */}
@@ -392,6 +370,7 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
                 style={{
                   marginTop: "10px",
                 }}
+                disabled={saving}
               >
                 Retry
               </button>
@@ -441,7 +420,7 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
                     type="checkbox"
                     checked={selected}
                     onChange={() => toggleUser(id)}
-                    disabled={creating}
+                    disabled={saving}
                   />
 
                   {/* ICON */}
@@ -538,7 +517,7 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
           <button
             type="button"
             onClick={onClose}
-            disabled={creating}
+            disabled={saving}
             style={{
               flex: 1,
             }}
@@ -549,9 +528,9 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
           <button
             type="button"
             className="primary-btn"
-            onClick={handleCreateGroup}
+            onClick={handleSaveGroup}
             disabled={
-              creating ||
+              saving ||
               loadingUsers ||
               !groupName.trim() ||
               selectedUsers.length === 0
@@ -560,16 +539,23 @@ function CreateGroupModal({ onClose, onCreated }: Props) {
               flex: 1,
             }}
           >
-            {creating
-              ? "Creating..."
-              : `Create Group${
-                  selectedUsers.length ? ` (${selectedUsers.length})` : ""
-                }`}
+            {saving
+              ? isEditMode
+                ? "Saving..."
+                : "Creating..."
+              : isEditMode
+                ? "Save Changes"
+                : `Create Group${
+                    selectedUsers.length ? ` (${selectedUsers.length})` : ""
+                  }`}
           </button>
         </div>
       </div>
     </div>
   );
+  
 }
+
+
 
 export default CreateGroupModal;

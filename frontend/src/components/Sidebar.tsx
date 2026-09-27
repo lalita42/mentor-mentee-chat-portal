@@ -16,6 +16,7 @@ interface Props {
   onPrivateSelect: (user: User) => void;
 
   onCreateGroup: () => void;
+  onEditGroup: (group: Group) => void;
 
   onReports: () => void;
 
@@ -31,6 +32,7 @@ function Sidebar({
   onGroupSelect,
   onPrivateSelect,
   onCreateGroup,
+  onEditGroup,
   onReports,
   onLogout,
 }: Props) {
@@ -89,18 +91,38 @@ function Sidebar({
                 const isActive = selectedGroupId === groupId;
 
                 return (
-                  <button
+                  <div
                     key={groupId}
-                    type="button"
+                    className={`sidebar-group-row ${ isActive ? "active" : ""
+                    }`}>
+                    <button
+                      type="button"
                     className={`sidebar-item ${isActive ? "active" : ""}`}
                     onClick={() => onGroupSelect(group)}
-                  >
+                    >
                     <span className="item-icon group-icon">#</span>
 
                     <span className="item-text">{group.name}</span>
 
-                    {isActive && <span className="active-indicator" />}
-                  </button>
+                      {isActive && (
+                        <span className="active-indicator" />
+                      )}
+                    </button>
+
+                    {user.role === "ADMIN" && (
+                      <button
+                        type="button"
+                        className="edit-group-btn"
+                        title="Edit group"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onEditGroup(group);
+                        }}
+                      >
+                        ✎
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>
