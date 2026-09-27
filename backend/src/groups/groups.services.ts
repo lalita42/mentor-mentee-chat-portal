@@ -10,7 +10,7 @@ import { Model, Types } from 'mongoose';
 import { Group, GroupDocument } from './schemas/group.schema.js';
 import { User, UserDocument } from '../auth/schemas/user.schema.js';
 import { CreateGroupDto } from './dto/create-group.dto.js';
-import { UpdateGroupDto } from './dto/update-grouo.dto.js';
+import { UpdateGroupDto } from './dto/update-group.dto.js';
 import { Role } from '../common/enums.js';
 
 @Injectable()

@@ -13,7 +13,7 @@ import {
 import { GroupsService } from './groups.services.js';
 import { CreateGroupDto } from './dto/create-group.dto.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
-import { UpdateGroupDto } from './dto/update-grouo.dto.js';
+import { UpdateGroupDto } from './dto/update-group.dto.js';
 @Controller('groups')
 @UseGuards(JwtAuthGuard)
 export class GroupsController {
