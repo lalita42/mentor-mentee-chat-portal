@@ -11,11 +11,14 @@ interface Props {
 
   privateUsers: User[];
 
+  onlineUserIds: string[];
+
   onGroupSelect: (group: Group) => void;
 
   onPrivateSelect: (user: User) => void;
 
   onCreateGroup: () => void;
+
   onEditGroup: (group: Group) => void;
 
   onReports: () => void;
@@ -29,6 +32,7 @@ function Sidebar({
   selectedGroupId,
   selectedPrivateUserId,
   privateUsers,
+  onlineUserIds,
   onGroupSelect,
   onPrivateSelect,
   onCreateGroup,
@@ -38,7 +42,9 @@ function Sidebar({
 }: Props) {
   return (
     <aside className="sidebar">
+
       {/* ================= HEADER ================= */}
+
       <div className="sidebar-header">
         <div className="brand">
           <div className="brand-icon">💬</div>
@@ -51,58 +57,88 @@ function Sidebar({
       </div>
 
       {/* ================= PROFILE ================= */}
+
       <div className="profile-box">
-        <div className="avatar">{user.name.charAt(0).toUpperCase()}</div>
+        <div className="avatar">
+          {user.name.charAt(0).toUpperCase()}
+        </div>
 
         <div className="profile-info">
           <strong>{user.name}</strong>
 
-          <span className="profile-role">{user.role}</span>
+          <span className="profile-role">
+            {user.role}
+          </span>
         </div>
 
         <div className="online-dot" />
       </div>
 
       {/* ================= INBOX ================= */}
+
       <div className="sidebar-section">
+
         <div className="section-heading">
           <span>YOUR INBOX</span>
         </div>
 
-        <div className="conversation-label">CONVERSATIONS</div>
+        <div className="conversation-label">
+          CONVERSATIONS
+        </div>
 
         {/* ================= GROUPS ================= */}
+
         <div className="sidebar-subsection">
+
           <div className="subsection-title">
             <span>GROUPS</span>
 
             {groups.length > 0 && (
-              <span className="count-badge">{groups.length}</span>
+              <span className="count-badge">
+                {groups.length}
+              </span>
             )}
           </div>
 
           {groups.length === 0 ? (
-            <div className="empty-small">No groups yet</div>
+            <div className="empty-small">
+              No groups yet
+            </div>
           ) : (
             <div className="sidebar-list">
-              {groups.map((group) => {
-                const groupId = group._id || "";
 
-                const isActive = selectedGroupId === groupId;
+              {groups.map((group) => {
+
+                const groupId =
+                  group._id || "";
+
+                const isActive =
+                  selectedGroupId === groupId;
 
                 return (
                   <div
                     key={groupId}
-                    className={`sidebar-group-row ${ isActive ? "active" : ""
-                    }`}>
+                    className={`sidebar-group-row ${
+                      isActive ? "active" : ""
+                    }`}
+                  >
+
                     <button
                       type="button"
-                    className={`sidebar-item ${isActive ? "active" : ""}`}
-                    onClick={() => onGroupSelect(group)}
+                      className={`sidebar-item ${
+                        isActive ? "active" : ""
+                      }`}
+                      onClick={() =>
+                        onGroupSelect(group)
+                      }
                     >
-                    <span className="item-icon group-icon">#</span>
+                      <span className="item-icon group-icon">
+                        #
+                      </span>
 
-                    <span className="item-text">{group.name}</span>
+                      <span className="item-text">
+                        {group.name}
+                      </span>
 
                       {isActive && (
                         <span className="active-indicator" />
@@ -122,104 +158,198 @@ function Sidebar({
                         ✎
                       </button>
                     )}
+
                   </div>
                 );
               })}
+
             </div>
           )}
+
         </div>
 
         {/* ================= PRIVATE CHAT ================= */}
+
         <div className="sidebar-subsection private-section">
+
           <div className="subsection-title">
+
             <span>PRIVATE CHAT</span>
 
             {privateUsers.length > 0 && (
-              <span className="count-badge">{privateUsers.length}</span>
+              <span className="count-badge">
+                {privateUsers.length}
+              </span>
             )}
+
           </div>
 
           {privateUsers.length === 0 ? (
-            <div className="empty-small">No available users</div>
+            <div className="empty-small">
+              No available users
+            </div>
           ) : (
             <div className="sidebar-list">
-              {privateUsers.map((person) => {
-                const personId = person._id || person.id || "";
 
-                const isActive = selectedPrivateUserId === personId;
+              {privateUsers.map((person) => {
+
+                const personId =
+                  person._id || person.id || "";
+
+                const isActive =
+                  selectedPrivateUserId === personId;
+
+                // Check real online status
+                const isOnline =
+                  onlineUserIds.includes(
+                    String(personId),
+                  );
 
                 return (
                   <button
                     key={personId}
                     type="button"
-                    className={`sidebar-item ${isActive ? "active" : ""}`}
-                    onClick={() => onPrivateSelect(person)}
+                    className={`sidebar-item ${
+                      isActive ? "active" : ""
+                    }`}
+                    onClick={() =>
+                      onPrivateSelect(person)
+                    }
                   >
-                    <span
-                      className={`private-avatar ${
-                        person.role === "MENTOR"
-                          ? "mentor-avatar"
-                          : person.role === "ADMIN"
-                            ? "admin-avatar"
-                            : "mentee-avatar"
-                      }`}
-                    >
-                      {person.name.charAt(0).toUpperCase()}
+
+                    {/* AVATAR + ONLINE DOT */}
+
+                    <span className="sidebar-person-avatar-wrap">
+
+                      <span
+                        className={`private-avatar ${
+                          person.role === "MENTOR"
+                            ? "mentor-avatar"
+                            : person.role === "ADMIN"
+                              ? "admin-avatar"
+                              : "mentee-avatar"
+                        }`}
+                      >
+                        {person.name
+                          .charAt(0)
+                          .toUpperCase()}
+                      </span>
+
+                      {isOnline && (
+                        <span className="sidebar-online-dot" />
+                      )}
+
                     </span>
+
+                    {/* NAME + STATUS */}
 
                     <span className="private-user-info">
-                      <span className="item-text">{person.name}</span>
 
-                      <small>{person.role}</small>
+                      <span className="item-text">
+                        {person.name}
+                      </span>
+
+                      <small>
+                        {person.role}
+                      </small>
+
+                      <span
+                        className={`sidebar-user-status ${
+                          isOnline
+                            ? "online"
+                            : "offline"
+                        }`}
+                      >
+                        {isOnline
+                          ? "Online"
+                          : "Offline"}
+                      </span>
+
                     </span>
 
-                    {isActive && <span className="active-indicator" />}
+                    {isActive && (
+                      <span className="active-indicator" />
+                    )}
+
                   </button>
                 );
               })}
+
             </div>
           )}
+
         </div>
       </div>
 
       {/* ================= ADMIN ACTIONS ================= */}
+
       {user.role === "ADMIN" && (
         <div className="admin-actions">
-          <div className="admin-title">ADMIN TOOLS</div>
+
+          <div className="admin-title">
+            ADMIN TOOLS
+          </div>
 
           <button
             type="button"
             className="sidebar-action"
             onClick={onCreateGroup}
           >
-            <span className="action-icon">+</span>
+            <span className="action-icon">
+              +
+            </span>
 
-            <span>Create Group</span>
+            <span>
+              Create Group
+            </span>
           </button>
 
-          <button type="button" className="sidebar-action" onClick={onReports}>
-            <span className="action-icon">⚑</span>
+          <button
+            type="button"
+            className="sidebar-action"
+            onClick={onReports}
+          >
+            <span className="action-icon">
+              ⚑
+            </span>
 
-            <span>Reports</span>
+            <span>
+              Reports
+            </span>
           </button>
+
         </div>
       )}
 
       {/* ================= FOOTER ================= */}
+
       <div className="logout-area">
+
         <div className="workspace-status">
+
           <span className="status-dot" />
 
-          <span>Workspace connected</span>
+          <span>
+            Workspace connected
+          </span>
+
         </div>
 
-        <button type="button" className="logout-btn" onClick={onLogout}>
+        <button
+          type="button"
+          className="logout-btn"
+          onClick={onLogout}
+        >
           <span>↪</span>
+
           Logout
         </button>
+
       </div>
+
     </aside>
   );
 }
 
 export default Sidebar;
+

@@ -22,18 +22,19 @@ import { GroupsService } from '../groups/groups.services.js';
 
     credentials: true,
   },
+  transports: ['websocket'],
 })
 export class ChatGateway {
   @WebSocketServer()
   server: Server;
 
-  private onlineUsers = new Map<string, string>();
+  private onlineUsers = new Map<string, Set<string>>();
 
   constructor(
     private readonly jwtService: JwtService,
 
     private readonly messagesService: MessagesService,
-
+    
     private readonly groupsService: GroupsService,
   ) {}
 
@@ -46,7 +47,8 @@ export class ChatGateway {
       const token = client.handshake.auth?.token;
 
       if (!token) {
-        client.disconnect();
+        console.log('❌ Socket rejected: token missing');
+        client.disconnect(true);
         return;
       }
 
@@ -55,41 +57,128 @@ export class ChatGateway {
       const userId = payload.sub;
 
       if (!userId) {
-        client.disconnect();
+        console.log('❌ Socket rejected: user ID missing');
+        client.disconnect(true);
         return;
       }
+      const normalizedUserId = String(userId);
 
       client.data.user = {
-        id: userId,
+        id: normalizedUserId,
         name: payload.name,
         email: payload.email,
         role: payload.role,
       };
 
-      this.onlineUsers.set(userId, client.id);
+      let userSockets = this.onlineUsers.get(normalizedUserId);
 
-      client.join(`user:${userId}`);
+      if (!userSockets) {
+        userSockets = new Set<string>();
+        this.onlineUsers.set(normalizedUserId, userSockets);
+      }
 
-      this.server.emit('presence:update', Array.from(this.onlineUsers.keys()));
+      userSockets.add(client.id);
 
-      console.log(`Socket connected: ${userId}`);
+      // Personal room
+      client.join(`user:${normalizedUserId}`);
+
+      console.log('🟢 Socket connected');
+      console.log('User:', normalizedUserId);
+      console.log('Socket:', client.id);
+
+      // Send current presence to everyone
+
+      this.broadcastPresence();
+   // Also send current presence directly to this client
+ 
+      client.emit('presence:update', Array.from(this.onlineUsers.keys()),
+    
+    
+      );
     } catch (error) {
-      client.disconnect();
+      console.error('❌ Socket authentication failed:', error);
+
+      client.disconnect(true);
     }
   }
 
-  // --------------------------------
-  // DISCONNECT
-  // --------------------------------
+
+  // SOCKET DISCONNECT
+  
 
   handleDisconnect(client: Socket) {
-    const user = client.data.user;
+    const user = client.data?.user;
 
-    if (user) {
-      this.onlineUsers.delete(user.id);
+    if (!user) {
+      console.log('🔌 Unknown socket disconnected:',
+        client.id,);
 
-      this.server.emit('presence:update', Array.from(this.onlineUsers.keys()));
+      return;
     }
+
+    const userId = String(user.id);
+
+    const userSockets = this.onlineUsers.get(userId);
+
+    if (!userSockets) {
+      return;
+    }
+
+    // Remove only this socket
+    userSockets.delete(client.id);
+      // User still has another tab/device connected
+ 
+    if (userSockets.size > 0) {
+      this.onlineUsers.set(userId, userSockets);
+
+      console.log( `🔌 One socket disconnected for ${userId}`, );
+      console.log( `Remaining sockets: ${userSockets.size}`,);
+
+      this.broadcastPresence();
+
+      return;
+    }
+
+     // No sockets left -> user is offline
+  
+    this.onlineUsers.delete(userId);
+
+    console.log(`⚪ User offline: ${userId}`);
+
+    this.broadcastPresence();
+  }
+
+  // PRESENCE BROADCAST
+ 
+  private broadcastPresence() {
+    const onlineUserIds = Array.from(
+      this.onlineUsers.keys(),
+    );
+
+    console.log(
+      '👥 Online users:',
+      onlineUserIds,
+    );
+
+    this.server.emit('presence:update',
+      onlineUserIds,
+    );
+  }
+
+  // GET CURRENT PRESENCE
+ 
+  @SubscribeMessage('presence:get')
+  getPresence(
+    @ConnectedSocket() client: Socket,
+  ) {
+    const onlineUserIds = Array.from(
+      this.onlineUsers.keys(),
+    );
+
+    client.emit(
+      'presence:update',
+      onlineUserIds,
+    );
   }
 
   // --------------------------------

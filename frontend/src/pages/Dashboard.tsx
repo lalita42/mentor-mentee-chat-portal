@@ -6,7 +6,11 @@ import type { Group, User } from "../types/index";
 
 import { getGroups, getUsers } from "../services/api";
 
-import { disconnectSocket } from "../socket/socket";
+import {
+  connectSocket,
+  disconnectSocket,
+  socket,
+} from "../socket/socket";
 
 import Sidebar from "../components/Sidebar";
 import GroupChat from "../components/GroupChat";
@@ -16,58 +20,69 @@ import CreateGroupModal from "../components/CreateGroupModal";
 function Dashboard() {
   const navigate = useNavigate();
 
+  // =========================================================
   // STATE
+  // =========================================================
+
   const [user, setUser] = useState<User | null>(null);
 
   const [groups, setGroups] = useState<Group[]>([]);
 
   const [privateUsers, setPrivateUsers] = useState<User[]>([]);
 
-  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [onlineUserIds, setOnlineUserIds] = useState<string[]>([]);
 
-  const [selectedPrivateUser, setSelectedPrivateUser] = useState<User | null>(
-    null,
-  );
+  const [selectedGroup, setSelectedGroup] =
+    useState<Group | null>(null);
 
-  const [showCreateGroup, setShowCreateGroup] = useState(false);
-  const [showEditGroup, setShowEditGroup] = useState(false);
+  const [selectedPrivateUser, setSelectedPrivateUser] =
+    useState<User | null>(null);
+
+  const [showCreateGroup, setShowCreateGroup] =
+    useState(false);
+
+  const [showEditGroup, setShowEditGroup] =
+    useState(false);
+
   const [loading, setLoading] = useState(true);
 
   const [refreshing, setRefreshing] = useState(false);
 
   const [apiError, setApiError] = useState("");
 
+  // =========================================================
   // LOGOUT
+  // =========================================================
 
   const logout = useCallback(() => {
     console.log("========== LOGOUT ==========");
 
-    // Disconnect socket
     try {
       disconnectSocket();
     } catch (error) {
-      console.error("SOCKET DISCONNECT ERROR:", error);
+      console.error(
+        "SOCKET DISCONNECT ERROR:",
+        error,
+      );
     }
 
-    // Remove login session
     localStorage.removeItem("token");
-
     localStorage.removeItem("user");
 
-    console.log("Token after logout:", localStorage.getItem("token"));
+    setOnlineUserIds([]);
 
-    console.log("User after logout:", localStorage.getItem("user"));
+    window.dispatchEvent(
+      new Event("auth-change"),
+    );
 
-    // Tell App that authentication changed
-    window.dispatchEvent(new Event("auth-change"));
-
-    // Go to login
     navigate("/login", {
       replace: true,
     });
   }, [navigate]);
 
+  // =========================================================
   // CHECK PRIVATE CHAT PERMISSION
+  // =========================================================
 
   const isPrivateChatAllowed = useCallback(
     (
@@ -79,81 +94,91 @@ function Dashboard() {
         return false;
       }
 
-      const currentUserId = currentUser._id || currentUser.id || "";
+      const currentUserId = String(
+        currentUser._id ||
+          currentUser.id ||
+          "",
+      );
 
-      const personId = person._id || person.id || "";
+      const personId = String(
+        person._id ||
+          person.id ||
+          "",
+      );
 
-      // -----------------------------------------------------
       // Invalid IDs
-      // -----------------------------------------------------
-
       if (!currentUserId || !personId) {
         return false;
       }
 
-      // -----------------------------------------------------
       // Cannot chat with yourself
-      // -----------------------------------------------------
-
       if (currentUserId === personId) {
         return false;
       }
 
-      // -----------------------------------------------------
-      // ADMIN
-      // -----------------------------------------------------
-
+      // ADMIN can chat with other users
       if (currentUser.role === "ADMIN") {
         return true;
       }
 
-      // -----------------------------------------------------
       // Only MENTOR <-> MENTEE
-      // -----------------------------------------------------
-
       const validRolePair =
-        (currentUser.role === "MENTOR" && person.role === "MENTEE") ||
-        (currentUser.role === "MENTEE" && person.role === "MENTOR");
+        (currentUser.role === "MENTOR" &&
+          person.role === "MENTEE") ||
+        (currentUser.role === "MENTEE" &&
+          person.role === "MENTOR");
 
       if (!validRolePair) {
         return false;
       }
 
-      // -----------------------------------------------------
-      // SAME GROUP CHECK
-      // -----------------------------------------------------
-
-      const sameGroup = groupsList.some((group) => {
+      // Same group check
+      return groupsList.some((group) => {
         const members = group.members || [];
 
-        const currentUserInGroup = members.some((member: User) => {
-          const memberId = member._id || member.id || "";
+        const currentUserInGroup =
+          members.some((member: User) => {
+            const memberId = String(
+              member._id ||
+                member.id ||
+                "",
+            );
 
-          return memberId === currentUserId;
-        });
+            return (
+              memberId === currentUserId
+            );
+          });
 
-        const personInGroup = members.some((member: User) => {
-          const memberId = member._id || member.id || "";
+        const personInGroup =
+          members.some((member: User) => {
+            const memberId = String(
+              member._id ||
+                member.id ||
+                "",
+            );
 
-          return memberId === personId;
-        });
+            return memberId === personId;
+          });
 
-        return currentUserInGroup && personInGroup;
+        return (
+          currentUserInGroup &&
+          personInGroup
+        );
       });
-
-      return sameGroup;
     },
     [user, groups],
   );
 
+  // =========================================================
   // LOAD DASHBOARD
+  // =========================================================
 
   const loadDashboard = useCallback(async () => {
     try {
       setApiError("");
-      // GET CURRENT USER FROM STORAGE
 
-      const savedUser = localStorage.getItem("user");
+      const savedUser =
+        localStorage.getItem("user");
 
       if (!savedUser) {
         logout();
@@ -163,181 +188,331 @@ function Dashboard() {
       let currentUser: User;
 
       try {
-        currentUser = JSON.parse(savedUser);
+        currentUser =
+          JSON.parse(savedUser);
       } catch (error) {
-        console.error("USER JSON ERROR:", error);
+        console.error(
+          "USER JSON ERROR:",
+          error,
+        );
 
         logout();
         return;
       }
+
+      // =====================================================
       // LOAD GROUPS
+      // =====================================================
 
       let groupsArray: Group[] = [];
 
       try {
-        console.log("Loading groups...");
-
-        const groupsResponse = await getGroups();
-
-        console.log("Groups response:", groupsResponse);
+        const groupsResponse =
+          await getGroups();
 
         if (Array.isArray(groupsResponse)) {
           groupsArray = groupsResponse;
-        } else if (Array.isArray(groupsResponse?.groups)) {
-          groupsArray = groupsResponse.groups;
+        } else if (
+          Array.isArray(
+            groupsResponse?.groups,
+          )
+        ) {
+          groupsArray =
+            groupsResponse.groups;
         }
 
-        console.log("Final groups:", groupsArray);
-
         setGroups(groupsArray);
+
+        console.log(
+          "GROUPS:",
+          groupsArray,
+        );
       } catch (error: any) {
         console.error(
           "GROUPS ERROR:",
-          error?.response?.data || error?.message || error,
+          error?.response?.data ||
+            error?.message ||
+            error,
         );
 
         setGroups([]);
 
-        if (error?.response?.status === 401) {
+        if (
+          error?.response?.status === 401
+        ) {
           logout();
           return;
         }
+
+        setApiError(
+          "Unable to load groups.",
+        );
       }
 
-      // ===================================================
+      // =====================================================
       // LOAD USERS
-      // ===================================================
+      // =====================================================
 
       try {
-        console.log("Loading users...");
-
-        const usersResponse = await getUsers();
-
-        console.log("Users response:", usersResponse);
+        const usersResponse =
+          await getUsers();
 
         let usersArray: User[] = [];
 
         if (Array.isArray(usersResponse)) {
           usersArray = usersResponse;
-        } else if (Array.isArray(usersResponse?.users)) {
-          usersArray = usersResponse.users;
+        } else if (
+          Array.isArray(
+            usersResponse?.users,
+          )
+        ) {
+          usersArray =
+            usersResponse.users;
         }
 
-        // =================================================
-        // CURRENT USER ID
-        // =================================================
+        const currentId = String(
+          currentUser._id ||
+            currentUser.id ||
+            "",
+        );
 
-        const currentId = currentUser._id || currentUser.id || "";
-
-        // =================================================
+        // ===================================================
         // FILTER PRIVATE USERS
-        //
-        // Only SAME GROUP users
-        // =================================================
+        // ===================================================
 
-        const filteredUsers = usersArray.filter((person: User) => {
-          const personId = person._id || person.id || "";
+        const filteredUsers =
+          usersArray.filter(
+            (person: User) => {
+              const personId = String(
+                person._id ||
+                  person.id ||
+                  "",
+              );
 
-          // -------------------------------------------
-          // Don't show yourself
-          // -------------------------------------------
+              // Don't show yourself
+              if (
+                !personId ||
+                personId === currentId
+              ) {
+                return false;
+              }
 
-          if (!personId || personId === currentId) {
-            return false;
-          }
+              // ADMIN
+              if (
+                currentUser.role ===
+                "ADMIN"
+              ) {
+                return true;
+              }
 
-          // -------------------------------------------
-          // ADMIN
-          // -------------------------------------------
+              // Only Mentor <-> Mentee
+              const validRolePair =
+                (currentUser.role ===
+                  "MENTEE" &&
+                  person.role ===
+                    "MENTOR") ||
+                (currentUser.role ===
+                  "MENTOR" &&
+                  person.role ===
+                    "MENTEE");
 
-          if (currentUser.role === "ADMIN") {
-            return true;
-          }
+              if (!validRolePair) {
+                return false;
+              }
 
-          // -------------------------------------------
-          // Check valid role pair
-          // -------------------------------------------
+              // Same group
+              return groupsArray.some(
+                (group) => {
+                  const members =
+                    group.members || [];
 
-          const validRolePair =
-            (currentUser.role === "MENTEE" && person.role === "MENTOR") ||
-            (currentUser.role === "MENTOR" && person.role === "MENTEE");
+                  const currentUserInGroup =
+                    members.some(
+                      (member: User) => {
+                        const memberId =
+                          String(
+                            member._id ||
+                              member.id ||
+                              "",
+                          );
 
-          if (!validRolePair) {
-            return false;
-          }
+                        return (
+                          memberId ===
+                          currentId
+                        );
+                      },
+                    );
 
-          // -------------------------------------------
-          // SAME GROUP
-          // -------------------------------------------
+                  const personInGroup =
+                    members.some(
+                      (member: User) => {
+                        const memberId =
+                          String(
+                            member._id ||
+                              member.id ||
+                              "",
+                          );
 
-          const sameGroup = groupsArray.some((group) => {
-            const members = group.members || [];
+                        return (
+                          memberId ===
+                          personId
+                        );
+                      },
+                    );
 
-            const currentUserInGroup = members.some((member: User) => {
-              const memberId = member._id || member.id || "";
+                  return (
+                    currentUserInGroup &&
+                    personInGroup
+                  );
+                },
+              );
+            },
+          );
 
-              return memberId === currentId;
-            });
+        setPrivateUsers(
+          filteredUsers,
+        );
 
-            const personInGroup = members.some((member: User) => {
-              const memberId = member._id || member.id || "";
-
-              return memberId === personId;
-            });
-
-            return currentUserInGroup && personInGroup;
-          });
-
-          return sameGroup;
-        });
-
-        console.log("ALLOWED PRIVATE USERS:", filteredUsers);
-
-        setPrivateUsers(filteredUsers);
+        console.log(
+          "PRIVATE USERS:",
+          filteredUsers,
+        );
       } catch (error: any) {
         console.error(
           "USERS ERROR:",
-          error?.response?.data || error?.message || error,
+          error?.response?.data ||
+            error?.message ||
+            error,
         );
 
         setPrivateUsers([]);
 
-        if (error?.response?.status === 401) {
+        if (
+          error?.response?.status === 401
+        ) {
           logout();
           return;
         }
+
+        setApiError(
+          "Unable to load private chat users.",
+        );
       }
     } catch (error: any) {
-      console.error("DASHBOARD ERROR:", error);
+      console.error(
+        "DASHBOARD ERROR:",
+        error,
+      );
 
-      if (error?.response?.status === 401) {
+      if (
+        error?.response?.status === 401
+      ) {
         logout();
         return;
       }
 
-      setApiError("Some dashboard data could not be loaded.");
+      setApiError(
+        "Some dashboard data could not be loaded.",
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, [logout]);
 
-  // INITIALIZE DASHBOARD
+  // =========================================================
+  // SOCKET CONNECTION
+  // =========================================================
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    console.log(
+      "========== DASHBOARD SOCKET ==========",
+    );
 
-    const savedUser = localStorage.getItem("user");
+    connectSocket();
 
-    console.log("========== DASHBOARD ==========");
+    return () => {
+      // Don't disconnect here.
+      // Logout handles socket disconnect.
+    };
+  }, []);
 
-    console.log("Token exists:", !!token);
+  // =========================================================
+  // REAL-TIME PRESENCE
+  // =========================================================
 
-    console.log("Saved user:", savedUser);
+  useEffect(() => {
+    const handlePresenceUpdate = (
+      ids: string[],
+    ) => {
+      const normalizedIds =
+        Array.isArray(ids)
+          ? ids.map(String)
+          : [];
 
-    // -------------------------------------------------------
-    // NO LOGIN SESSION
-    // -------------------------------------------------------
+      console.log(
+        "DASHBOARD PRESENCE:",
+        normalizedIds,
+      );
+
+      setOnlineUserIds(
+        normalizedIds,
+      );
+    };
+
+    const requestPresence = () => {
+      if (!socket.connected) {
+        return;
+      }
+
+      console.log(
+        "REQUESTING CURRENT PRESENCE",
+      );
+
+      socket.emit("presence:get");
+    };
+
+    // IMPORTANT:
+    // Register listener first
+    socket.on(
+      "presence:update",
+      handlePresenceUpdate,
+    );
+
+    // Request presence whenever socket connects
+    socket.on(
+      "connect",
+      requestPresence,
+    );
+
+    // If already connected
+    if (socket.connected) {
+      requestPresence();
+    }
+
+    return () => {
+      socket.off(
+        "presence:update",
+        handlePresenceUpdate,
+      );
+
+      socket.off(
+        "connect",
+        requestPresence,
+      );
+    };
+  }, []);
+
+  // =========================================================
+  // INITIAL DASHBOARD LOAD
+  // =========================================================
+
+  useEffect(() => {
+    const token =
+      localStorage.getItem("token");
+
+    const savedUser =
+      localStorage.getItem("user");
 
     if (!token || !savedUser) {
       navigate("/login", {
@@ -347,160 +522,167 @@ function Dashboard() {
       return;
     }
 
-    // -------------------------------------------------------
-    // PARSE USER
-    // -------------------------------------------------------
-
     try {
-      const parsedUser: User = JSON.parse(savedUser);
-
-      console.log("Dashboard user:", parsedUser);
+      const parsedUser: User =
+        JSON.parse(savedUser);
 
       setUser(parsedUser);
 
       loadDashboard();
     } catch (error) {
-      console.error("USER JSON ERROR:", error);
+      console.error(
+        "USER JSON ERROR:",
+        error,
+      );
 
       logout();
     }
-  }, [navigate, loadDashboard, logout]);
+  }, [
+    navigate,
+    loadDashboard,
+    logout,
+  ]);
 
+  // =========================================================
   // REFRESH
+  // =========================================================
 
   const refreshDashboard = async () => {
+    if (refreshing) {
+      return;
+    }
+
     setRefreshing(true);
 
     await loadDashboard();
   };
 
+  // =========================================================
   // GROUP SELECT
+  // =========================================================
 
-  const selectGroup = (group: Group) => {
-    console.log("GROUP SELECTED:", group);
-
+  const selectGroup = (
+    group: Group,
+  ) => {
     setSelectedGroup(group);
-
-    // Close private chat
     setSelectedPrivateUser(null);
   };
 
+  // =========================================================
   // PRIVATE USER SELECT
+  // =========================================================
 
-  const selectPrivateUser = (person: User) => {
-    console.log("PRIVATE USER SELECTED:", person);
-
-    // Double-check permission
-    if (!isPrivateChatAllowed(person)) {
-      alert("You can only privately chat with a user from your group.");
-
-      return;
-    }
-
-    // Open private chat
-    setSelectedPrivateUser(person);
-
-    // Close group chat
-    setSelectedGroup(null);
-  };
-
-  // CHAT FROM GROUP ROSTER
-
-  const handlePrivateSelect = (person: User) => {
-    console.log("CHAT BUTTON CLICKED:", person);
-
-    // Check same-group permission
-    if (!isPrivateChatAllowed(person)) {
-      alert("You can only privately chat with a user from your group.");
+  const selectPrivateUser = (
+    person: User,
+  ) => {
+    if (
+      !isPrivateChatAllowed(person)
+    ) {
+      alert(
+        "You can only privately chat with an allowed user from your group.",
+      );
 
       return;
     }
 
-    // Open selected private chat
     setSelectedPrivateUser(person);
-
-    // Close current group
     setSelectedGroup(null);
   };
 
-  // LOADING SCREEN
+  // =========================================================
+  // PRIVATE CHAT FROM GROUP
+  // =========================================================
 
-  if (loading) {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#f5f7fb",
-          fontFamily: "Arial, sans-serif",
-        }}
-      >
-        <div
-          style={{
-            textAlign: "center",
-          }}
-        >
-          <div
-            style={{
-              width: "45px",
-              height: "45px",
-              border: "4px solid #e5e7eb",
-              borderTop: "4px solid #2563eb",
-              borderRadius: "50%",
-              margin: "0 auto 20px",
-              animation: "spin 1s linear infinite",
-            }}
-          />
+  const handlePrivateSelect = (
+    person: User,
+  ) => {
+    if (
+      !isPrivateChatAllowed(person)
+    ) {
+      alert(
+        "You can only privately chat with an allowed user from your group.",
+      );
 
-          <h2>Loading Dashboard...</h2>
+      return;
+    }
 
-          <p
-            style={{
-              color: "#6b7280",
-            }}
-          >
-            Please wait
-          </p>
+    setSelectedPrivateUser(person);
+    setSelectedGroup(null);
+  };
+
+  // =========================================================
+  // LOADING
+  // =========================================================
+
+if (loading) {
+  return (
+    <div className="dashboard-loader">
+      <div className="loader-content">
+
+        {/* Logo */}
+        <div className="loader-logo">
+          <div className="loader-logo-inner">
+            💬
+          </div>
         </div>
-      </div>
-    );
-  }
 
+        {/* Brand */}
+        <div className="loader-brand">
+          MentorChat
+        </div>
+
+        <div className="loader-subtitle">
+          Mentorship Hub
+        </div>
+
+        {/* Loading text */}
+        <div className="loader-status">
+          <span>Preparing your workspace</span>
+
+          <span className="loader-dots">
+            <span>.</span>
+            <span>.</span>
+            <span>.</span>
+          </span>
+        </div>
+
+        {/* Progress line */}
+        <div className="loader-progress">
+          <div className="loader-progress-bar" />
+        </div>
+
+        <div className="loader-hint">
+          Loading groups and conversations
+        </div>
+
+      </div>
+    </div>
+  );
+}
+  // =========================================================
   // USER NOT FOUND
+  // =========================================================
 
   if (!user) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#f5f7fb",
-        }}
-      >
-        <div
-          style={{
-            textAlign: "center",
-          }}
-        >
-          <h2>Session not found</h2>
+      <div className="dashboard-session-screen">
+        <div className="dashboard-session-card">
+          <div className="dashboard-session-icon">
+            🔐
+          </div>
 
-          <p>Please login again.</p>
+          <h2>
+            Session not found
+          </h2>
+
+          <p>
+            Your login session could not
+            be found. Please login again.
+          </p>
 
           <button
             type="button"
             onClick={logout}
-            style={{
-              padding: "10px 20px",
-              background: "#2563eb",
-              color: "#ffffff",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
-            }}
           >
             Go to Login
           </button>
@@ -509,39 +691,45 @@ function Dashboard() {
     );
   }
 
+  // =========================================================
   // MAIN DASHBOARD
-
+  // =========================================================
 
   return (
-    <div
-      className="app-layout"
-      style={{
-        minHeight: "100vh",
-      }}
-    >
+    <div className="app-layout">
       {/* =====================================================
-          SIDEBAR ================================= */}
+          SIDEBAR
+      ===================================================== */}
 
       <Sidebar
         user={user}
         groups={groups}
-        selectedGroupId={selectedGroup?._id || null}
+        selectedGroupId={
+          selectedGroup?._id || null
+        }
         selectedPrivateUserId={
           selectedPrivateUser
-            ? selectedPrivateUser._id || selectedPrivateUser.id || null
+            ? selectedPrivateUser._id ||
+              selectedPrivateUser.id ||
+              null
             : null
         }
         privateUsers={privateUsers}
+        onlineUserIds={onlineUserIds}
         onGroupSelect={selectGroup}
-        onPrivateSelect={selectPrivateUser}
-        onCreateGroup={() => setShowCreateGroup(true)}
+        onPrivateSelect={
+          selectPrivateUser
+        }
+        onCreateGroup={() =>
+          setShowCreateGroup(true)
+        }
         onEditGroup={(group) => {
           setSelectedGroup(group);
           setShowEditGroup(true);
         }}
-        onReports={() => {
-  navigate("/reports");
-}}
+        onReports={() =>
+          navigate("/reports")
+        }
         onLogout={logout}
       />
 
@@ -549,68 +737,79 @@ function Dashboard() {
           MAIN CONTENT
       ===================================================== */}
 
-      <main
-        className="main-content"
-        style={{
-          position: "relative",
-        }}
-      >
-        {/* ===================================================
-            TOP BAR
-        =================================================== */}
+      <main className="main-content">
+        {/* TOP BAR */}
 
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            alignItems: "center",
-            gap: "10px",
-            padding: "12px 20px",
-            borderBottom: "1px solid #e5e7eb",
-            background: "#ffffff",
-          }}
-        >
-          <span
-            style={{
-              color: "#6b7280",
-              fontSize: "14px",
-            }}
-          >
-            {user.role}
-          </span>
+        <header className="dashboard-topbar">
+          <div className="topbar-left">
+            <div className="topbar-brand-dot" />
 
-          <button
-            type="button"
-            onClick={refreshDashboard}
-            disabled={refreshing}
-            style={{
-              padding: "7px 13px",
-              border: "1px solid #d1d5db",
-              background: "#ffffff",
-              borderRadius: "7px",
-              cursor: "pointer",
-            }}
-          >
-            {refreshing ? "Refreshing..." : "↻ Refresh"}
-          </button>
-        </div>
+            <span className="topbar-brand">
+              MentorChat
+            </span>
+          </div>
 
-        {/* ===================================================
-            API WARNING
-        =================================================== */}
+          <div className="topbar-right">
+            <div className="topbar-user-info">
+              <span className="topbar-role">
+                {user.role}
+              </span>
+
+              <span className="topbar-divider" />
+
+              <span className="topbar-user-name">
+                {user.name}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              className="dashboard-refresh-button"
+              onClick={refreshDashboard}
+              disabled={refreshing}
+            >
+              <span
+                className={
+                  refreshing
+                    ? "refresh-symbol spinning"
+                    : "refresh-symbol"
+                }
+              >
+                ↻
+              </span>
+
+              <span>
+                {refreshing
+                  ? "Refreshing..."
+                  : "Refresh"}
+              </span>
+            </button>
+          </div>
+        </header>
+
+        {/* ERROR */}
 
         {apiError && (
-          <div
-            style={{
-              margin: "15px 20px",
-              padding: "12px 15px",
-              background: "#fff7ed",
-              color: "#9a3412",
-              border: "1px solid #fed7aa",
-              borderRadius: "8px",
-            }}
-          >
-            {apiError}
+          <div className="dashboard-api-error">
+            <div className="api-error-left">
+              <span className="api-error-icon">
+                !
+              </span>
+
+              <span>
+                {apiError}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                setApiError("")
+              }
+              aria-label="Close error"
+            >
+              ×
+            </button>
           </div>
         )}
 
@@ -621,9 +820,8 @@ function Dashboard() {
         {selectedGroup && (
           <GroupChat
             key={selectedGroup._id}
-            group={selectedGroup}
             currentUser={user}
-            onPrivateSelect={handlePrivateSelect}
+            group={selectedGroup}
           />
         )}
 
@@ -633,10 +831,26 @@ function Dashboard() {
 
         {selectedPrivateUser && (
           <PrivateChat
-            key={selectedPrivateUser._id || selectedPrivateUser.id}
+            key={
+              selectedPrivateUser._id ||
+              selectedPrivateUser.id
+            }
             currentUser={user}
-            otherUser={selectedPrivateUser}
-            isAllowedMentorChat={isPrivateChatAllowed(selectedPrivateUser)}
+            otherUser={
+              selectedPrivateUser
+            }
+            isAllowedMentorChat={
+              isPrivateChatAllowed(
+                selectedPrivateUser,
+              )
+            }
+            isOtherUserOnline={onlineUserIds.includes(
+              String(
+                selectedPrivateUser._id ||
+                  selectedPrivateUser.id ||
+                  "",
+              ),
+            )}
           />
         )}
 
@@ -644,161 +858,167 @@ function Dashboard() {
             WELCOME PAGE
         =================================================== */}
 
-        {!selectedGroup && !selectedPrivateUser && (
-          <div
-            style={{
-              minHeight: "calc(100vh - 70px)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "30px",
-              boxSizing: "border-box",
-            }}
-          >
-            <div
-              style={{
-                maxWidth: "850px",
-                width: "100%",
-                textAlign: "center",
-              }}
-            >
-              {/* ICON */}
-
-              <div
-                style={{
-                  width: "80px",
-                  height: "80px",
-                  borderRadius: "24px",
-                  background: "#dbeafe",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "40px",
-                  margin: "0 auto 20px",
-                }}
-              >
-                💬
-              </div>
-
-              {/* TITLE */}
-
-              <h1
-                style={{
-                  margin: "0 0 10px",
-                  fontSize: "32px",
-                  color: "#111827",
-                }}
-              >
-                Welcome to MentorChat
-              </h1>
-
-              {/* USER */}
-
-              <p
-                style={{
-                  fontSize: "18px",
-                  color: "#374151",
-                  margin: "0 0 8px",
-                }}
-              >
-                Hello, <strong>{user.name}</strong> 👋
-              </p>
-
-              <p
-                style={{
-                  color: "#6b7280",
-                  marginBottom: "30px",
-                }}
-              >
-                Select a group or private chat to start messaging.
-              </p>
-
-              {/* FEATURES */}
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                  gap: "15px",
-                  textAlign: "left",
-                }}
-              >
-                <FeatureCard
-                  icon="👥"
-                  title="Group Chat"
-                  text="Connect with your batch"
-                />
-
-                <FeatureCard
-                  icon="🔒"
-                  title="Private Chat"
-                  text="Talk privately with your group mentor or mentee"
-                />
-
-                <FeatureCard
-                  icon="📎"
-                  title="File Sharing"
-                  text="Share images and PDF files"
-                />
-
-                <FeatureCard
-                  icon="📢"
-                  title="Announcements"
-                  text="Stay updated with important news"
-                />
-              </div>
-
-              {/* NO GROUPS */}
-
-              {groups.length === 0 && (
-                <div
-                  style={{
-                    marginTop: "25px",
-                    padding: "15px",
-                    background: "#ffffff",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "10px",
-                    color: "#6b7280",
-                  }}
-                >
-                  No groups available yet.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        {!selectedGroup &&
+          !selectedPrivateUser && (
+            <WelcomeSection
+              user={user}
+              groups={groups}
+              privateUsers={privateUsers}
+            />
+          )}
       </main>
 
       {/* =====================================================
-          CREATE GROUP MODAL
+          CREATE GROUP
       ===================================================== */}
 
       {showCreateGroup && (
         <CreateGroupModal
-          onClose={() => setShowCreateGroup(false)}
+          onClose={() =>
+            setShowCreateGroup(false)
+          }
           onCreated={async () => {
             setShowCreateGroup(false);
-
             await loadDashboard();
           }}
         />
       )}
-      {showEditGroup && selectedGroup && (
-  <CreateGroupModal
-    group={selectedGroup}
-    onClose={() => setShowEditGroup(false)}
-    onCreated={async () => {
-      setShowEditGroup(false);
-      setSelectedGroup(null);
-      await loadDashboard();
-    }}
-  />
-)}
+
+      {/* =====================================================
+          EDIT GROUP
+      ===================================================== */}
+
+      {showEditGroup &&
+        selectedGroup && (
+          <CreateGroupModal
+            group={selectedGroup}
+            onClose={() =>
+              setShowEditGroup(false)
+            }
+            onCreated={async () => {
+              setShowEditGroup(false);
+              setSelectedGroup(null);
+              await loadDashboard();
+            }}
+          />
+        )}
     </div>
   );
 }
 
+// =============================================================
+// WELCOME SECTION
+// =============================================================
+
+function WelcomeSection({
+  user,
+  groups,
+  privateUsers,
+}: {
+  user: User;
+  groups: Group[];
+  privateUsers: User[];
+}) {
+  return (
+    <section className="welcome-section">
+      <div className="welcome-container">
+
+        {/* HERO */}
+
+        <div className="welcome-hero">
+          <div className="welcome-icon">
+            💬
+          </div>
+
+          <div className="welcome-eyebrow">
+            MENTORCHAT WORKSPACE
+          </div>
+
+          <h1>
+            Welcome to{" "}
+            <span>MentorChat</span>
+          </h1>
+
+          <p className="welcome-greeting">
+            Hello,{" "}
+            <strong>{user.name}</strong>{" "}
+            👋
+          </p>
+
+          <p className="welcome-description">
+            Select a group or private
+            conversation from the sidebar
+            to start chatting.
+          </p>
+        </div>
+
+        {/* FEATURE CARDS */}
+
+        <div className="welcome-features">
+          <FeatureCard
+            icon="👥"
+            title="Group Chat"
+            text="Connect and communicate with your batch members."
+          />
+
+          <FeatureCard
+            icon="🔒"
+            title="Private Chat"
+            text="Have private conversations with allowed mentors or mentees."
+          />
+
+          <FeatureCard
+            icon="📎"
+            title="File Sharing"
+            text="Share useful files, documents and learning resources."
+          />
+
+          <FeatureCard
+            icon="📢"
+            title="Announcements"
+            text="Stay updated with important group announcements."
+          />
+        </div>
+
+        {/* STATUS */}
+
+        <div className="welcome-bottom">
+          <div className="welcome-status">
+            <span className="status-green-dot" />
+
+            <span>
+              {groups.length > 0
+                ? `${groups.length} ${
+                    groups.length === 1
+                      ? "group"
+                      : "groups"
+                  } available`
+                : "No groups available yet"}
+            </span>
+          </div>
+
+          <div className="welcome-status">
+            <span className="status-blue-dot" />
+
+            <span>
+              {privateUsers.length > 0
+                ? `${privateUsers.length} private ${
+                    privateUsers.length === 1
+                      ? "contact"
+                      : "contacts"
+                  }`
+                : "No private contacts"}
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// =============================================================
 // FEATURE CARD
+// =============================================================
 
 function FeatureCard({
   icon,
@@ -810,44 +1030,16 @@ function FeatureCard({
   text: string;
 }) {
   return (
-    <div
-      style={{
-        background: "#ffffff",
-        border: "1px solid #e5e7eb",
-        borderRadius: "12px",
-        padding: "20px",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-      }}
-    >
-      <div
-        style={{
-          fontSize: "28px",
-          marginBottom: "12px",
-        }}
-      >
+    <div className="welcome-feature-card">
+      <div className="feature-icon">
         {icon}
       </div>
 
-      <h3
-        style={{
-          margin: "0 0 7px",
-          fontSize: "16px",
-          color: "#111827",
-        }}
-      >
-        {title}
-      </h3>
+      <div className="feature-card-content">
+        <h3>{title}</h3>
 
-      <p
-        style={{
-          margin: 0,
-          fontSize: "13px",
-          lineHeight: "1.5",
-          color: "#6b7280",
-        }}
-      >
-        {text}
-      </p>
+        <p>{text}</p>
+      </div>
     </div>
   );
 }
