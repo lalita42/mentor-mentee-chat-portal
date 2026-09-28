@@ -822,6 +822,7 @@ if (loading) {
             key={selectedGroup._id}
             currentUser={user}
             group={selectedGroup}
+            onPrivateSelect={handlePrivateSelect}
           />
         )}
 

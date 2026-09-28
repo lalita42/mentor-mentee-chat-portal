@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import type { Group, Message, User } from "../types";
 
 import {
-  addMember,
   createMessage,
   deleteMessage,
   getGroup,
@@ -449,23 +448,23 @@ function GroupChat({ group, currentUser, onPrivateSelect }: Props) {
   // ADD MEMBER
   // ==========================================
 
-  async function handleAddMember(userId: string) {
-    if (currentUser.role !== "ADMIN") {
-      alert("Only admin can add members.");
+  // async function handleAddMember(userId: string) {
+  //   if (currentUser.role !== "ADMIN") {
+  //     alert("Only admin can add members.");
 
-      return;
-    }
+  //     return;
+  //   }
 
-    try {
-      const updated = await addMember(groupId, userId);
+  //   try {
+  //     const updated = await addMember(groupId, userId);
 
-      setGroupData(updated);
+  //     setGroupData(updated);
 
-      alert("Member added successfully");
-    } catch (error: any) {
-      alert(error?.response?.data?.message || "Cannot add member");
-    }
-  }
+  //     alert("Member added successfully");
+  //   } catch (error: any) {
+  //     alert(error?.response?.data?.message || "Cannot add member");
+  //   }
+  // }
 
   // ==========================================================
   // PRIVATE CHAT PERMISSION
@@ -556,14 +555,14 @@ function GroupChat({ group, currentUser, onPrivateSelect }: Props) {
           </div>
 
           <div className="chat-header-right">
-            <span className="connection-status">🟢 LIVE</span>
+            {/* <span className="connection-status">🟢 LIVE</span> */}
 
-            <button
+            {/* <button
               className="header-btn"
               onClick={() => setShowMembers((previous) => !previous)}
             >
               •••
-            </button>
+            </button> */}
           </div>
         </header>
 

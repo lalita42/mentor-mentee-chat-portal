@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-
+import type { Report } from "../types";
 import {
   getReports,
   resolveReport,
-  type Report,
 } from "../services/api";
 
 function ReportsPanel() {
